@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Text Diff Checker</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background-color: #f2f2f2;
+        }
+
+        .container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        .card {
+            width: 800px;
+            padding: 20px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+            background-color: #fff;
+        }
+
+        .title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .textarea-container {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 100px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            resize: none;
+        }
+
+        .button-container {
+            text-align: center;
+        }
+
+        .diff-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+            overflow-y: scroll;
+            max-height: 400px; /* Adjust the maximum height as per your preference */
+        }
+        .line-number-column {
+            flex: 0 0 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 5px;
+            padding-right: 10px;
+            border-right: 1px solid #ccc;
+        }
+
+        .line-number {
+            color: #999;
+        }
+
+        .diff-column {
+            overflow-wrap: break-word;
+        }
+
+        .line-container {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .added {
+            background-color: #d4f0d4;
+        }
+
+        .removed {
+            background-color: #ffdada;
+            text-decoration: line-through;
+        }
+
+        .support-text {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #888;
+            text-align: center;
+        }
+
+        .emojis {
+            display: flex;
+            justify-content: center;
+            margin-top: 10px;
+        }
+
+        .emoji {
+            font-size: 20px;
+            margin: 0 5px;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsdiff/5.1.0/diff.min.js" integrity="sha512-vco9RAxEuv4PQ+iTQyuKElwoUOcsVdp+WgU6Lgo82ASpDfF7vI66LlWz+CZc2lMdn52tjjLOuHvy8BQJFp8a1A==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="title">Text Diff Checker</div>
+            <div class="textarea-container">
+                <textarea id="text1" placeholder="Enter Text 1"></textarea>
+                <textarea id="text2" placeholder="Enter Text 2"></textarea>
+            </div>
+            <div class="button-container">
+                <button onclick="compareText()">Compare Text</button>
+            </div>
+            <div id="diffResult" class="diff-container"></div>
+            <div class="support-text">
+                Compare two texts and see the differences highlighted.<br>
+                Use this tool to track changes, identify modifications, or find discrepancies.
+            </div>
+            <div class="emojis">
+                <span class="emoji">&#x1F914;</span>
+                <span class="emoji">&#x1F4DD;</span>
+                <span class="emoji">&#x270D;</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function compareText() {
+            var text1 = document.getElementById("text1").value;
+            var text2 = document.getElementById("text2").value;
+            var diffResult = document.getElementById("diffResult");
+
+            var wordsPerLine = calculateWordsPerLine(text1, text2);
+            var lines1 = breakTextIntoLines(text1, wordsPerLine);
+            var lines2 = breakTextIntoLines(text2, wordsPerLine);
+
+            var diffHtml = generateDiffHtml(lines1, lines2);
+            diffResult.innerHTML = diffHtml;
+        }
+
+        function calculateWordsPerLine(text1, text2) {
+            var totalWords = Math.max(text1.split(' ').length, text2.split(' ').length);
+            return Math.ceil(totalWords / 10); // Adjust the divisor as per your preference
+        }
+
+        function breakTextIntoLines(text, wordsPerLine) {
+            var words = text.trim().split(' ');
+            var lines = [];
+            var line = '';
+
+            for (var i = 0; i < words.length; i++) {
+                line += words[i] + ' ';
+
+                if ((i + 1) % wordsPerLine === 0 || i === words.length - 1) {
+                    lines.push(line.trim());
+                    line = '';
+                }
+            }
+
+            return lines;
+        }
+
+        function generateDiffHtml(lines1, lines2) {
+            var diffHtml = '';
+
+            for (var i = 0; i < Math.max(lines1.length, lines2.length); i++) {
+                var line1 = lines1[i] || '';
+                var line2 = lines2[i] || '';
+
+                var diff = Diff.diffWords(line1, line2);
+
+                diffHtml += '<div class="line-container">';
+                diffHtml += generateLineNumberHtml(i + 1);
+                diffHtml += '<div class="diff-column">';
+                diffHtml += generateLineHtml(diff);
+                diffHtml += '</div>';
+                diffHtml += '</div>';
+            }
+
+            return diffHtml;
+        }
+
+        function generateLineNumberHtml(lineNumber) {
+            return '<div class="line-number">' + lineNumber + '</div>';
+        }
+
+        function generateLineHtml(diff) {
+  var lineHtml = '';
+
+  for (var i = 0; i < diff.length; i++) {
+    var change = diff[i];
+
+    if (change.added) {
+      lineHtml += '<span class="added">' + escapeHtml(change.value) + '</span>';
+    } else if (change.removed) {
+      lineHtml += '<span class="removed">' + escapeHtml(change.value) + '</span>';
+    } else {
+      lineHtml += escapeHtml(change.value);
+    }
+  }
+
+  lineHtml = lineHtml.replace(/\n/g, '<br>').replace(/\t/g, '&emsp;');
+
+  return lineHtml;
+}
+
+
+
+        function escapeHtml(text) {
+            var map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+        }
+    </script>
+</body>
+</html>
